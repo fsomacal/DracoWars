@@ -1,12 +1,17 @@
 const playerSprite = new Image();
 playerSprite.src = 'images/dragonPlayer.png';
 
+// Só começa o jogo quando a imagem carregar
+playerSprite.onload = () => {
+    console.log("Player sprite carregada!");
+};
+
 const frameWidth = 192;
 const frameHeight = 192;
-const row = 0;
-const totalFrames = 1;
+const row = 0;          
+const totalFrames = 1;  
 let currentFrame = 0;
-let frameSpeed = 0;
+let frameSpeed = 10;
 let frameCounter = 0;
 
 let player = { x: 0, y: 0 };
@@ -26,8 +31,6 @@ function updatePlayerAnimation() {
 }
 
 function drawPlayer(ctx) {
-    ctx.fillStyle = "red";
-    ctx.fillRect(player.x, player.y, frameWidth, frameHeight); // caixa de teste
     ctx.drawImage(
         playerSprite,
         currentFrame * frameWidth,
@@ -41,4 +44,4 @@ function drawPlayer(ctx) {
     );
 }
 
-export { drawPlayer, updatePlayerPosition, updatePlayerAnimation, playerSprite, player };
+export { drawPlayer, updatePlayerPosition, updatePlayerAnimation, playerSprite };
