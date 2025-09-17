@@ -1,20 +1,25 @@
 // --- SPRITESHEET DO DRAGÃO ---
 const dragonSprite = new Image();
-dragonSprite.src = 'dragonBoss.png'; // sua spritesheet
+dragonSprite.src = 'images/dragonBoss.png';
 
-const frameWidth = 128;
-const frameHeight = 128;
-const row = 0;          // linha da animação
-const totalFrames = 13;  // frames na linha
+const frameWidth = 512;
+const frameHeight = 512;
+const row = 0;          
+const totalFrames = 13;  
 let currentFrame = 0;
 let frameSpeed = 10;
 let frameCounter = 0;
 
 // Objeto do dragão (posição no canvas)
 let dragon = {
-    x: 100,
-    y: 100,
+    x: 0,
+    y: 0
 };
+
+function updateDragonPosition(canvas) {
+    dragon.x = canvas.width / 2 - frameWidth / 2;
+    dragon.y = 0;
+}
 
 // Atualiza animação do dragão
 function updateDragonAnimation() {
@@ -41,5 +46,5 @@ function drawDragon(ctx) {
     );
 }
 
-dragonSprite.onload = () => {
-};
+// Exporta funções
+export { drawDragon, updateDragonAnimation, updateDragonPosition };
