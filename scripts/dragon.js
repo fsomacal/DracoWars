@@ -4,17 +4,14 @@ dragonSprite.src = 'images/dragonBoss.png';
 
 const frameWidth = 512;
 const frameHeight = 512;
-const row = 0;          
-const totalFrames = 13;  
+const row = 0;
+const totalFrames = 13;
 let currentFrame = 0;
 let frameSpeed = 10;
 let frameCounter = 0;
 
 // Objeto do dragão (posição no canvas)
-let dragon = {
-    x: 0,
-    y: 0
-};
+let dragon = { x: 0, y: 0 };
 
 function updateDragonPosition(canvas) {
     dragon.x = canvas.width / 2 - frameWidth / 2;
@@ -46,5 +43,4 @@ function drawDragon(ctx) {
     );
 }
 
-// Exporta funções
 export { drawDragon, updateDragonAnimation, updateDragonPosition };
