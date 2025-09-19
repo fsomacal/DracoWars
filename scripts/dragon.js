@@ -42,7 +42,7 @@ export function drawDragon(ctx) {
         dragonFrameHeight,
         dragon.x,
         dragon.y,
-        dragonFrameWidth,
-        dragonFrameHeight
+        dragonFrameWidth * 0.8,
+        dragonFrameHeight * 0.8
     );
 }
