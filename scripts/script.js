@@ -11,21 +11,46 @@ function resizeCanvas() {
     canvas.height = window.innerHeight;
 }
 
-// chama no início
 resizeCanvas();
-
-// atualiza ao redimensionar a janela
 window.addEventListener("resize", resizeCanvas);
 
+// ---------------------
+// CHARGING ATTACK SETUP
+// ---------------------
+let charging = false;
+let chargeStart = 0;
+let chargeTime = 0;
+const maxChargeTime = 4000; // 4 segundos
 
-// Disparo com espaço
+// spritesheet do charging
+const chargeSprite = new Image();
+chargeSprite.src = "images/charging.png"; // seu caminho
+const chargeFrameWidth = 32;
+const chargeFrameHeight = 32;
+const chargeFrames = 9;
+
+// ---------------------
+// TECLADO
+// ---------------------
 window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") {
-        // dispara do centro do player
-        spawnFireball(player.x + player.width / 2 - 32, player.y);
+    if (e.code === "Space" && !charging) {
+        charging = true;
+        chargeStart = Date.now();
+        player.isCharging = true;
     }
 });
 
+window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+        charging = false;
+        chargeTime = 0;
+        player.isCharging = false;
+    }
+});
+
+// ---------------------
+// GAME
+// ---------------------
 function startGame() {
     updateDragonPosition(canvas);
     updatePlayerPosition(canvas);
@@ -35,6 +60,20 @@ function startGame() {
         updatePlayerAnimation();
         updatePlayerPosition(canvas);
         updateFireballs();
+
+        // CHARGING ATTACK LOGIC
+        if (charging) {
+            chargeTime = Date.now() - chargeStart;
+
+            if (chargeTime >= maxChargeTime) {
+                // dispara ataque
+                spawnFireball(player.x + player.width / 2 - 12, player.y);
+
+                // reinicia o carregamento automaticamente para continuar atacando se Space continuar pressionado
+                chargeStart = Date.now();
+                chargeTime = 0;
+            }
+        }
 
         // colisão fireball -> dragão
         for (let i = fireballs.length - 1; i >= 0; i--) {
@@ -59,6 +98,7 @@ function startGame() {
         drawDragon(ctx);
         drawPlayer(ctx);
         drawFireballs(ctx);
+        drawCharging(ctx);   
 
         // barra de vida do dragão
         ctx.fillStyle = "black";
@@ -74,6 +114,34 @@ function startGame() {
     }
 
     gameLoop();
+}
+
+// ---------------------
+// DESENHO DA ANIMAÇÃO DE CHARGING (crescimento de energia)
+// ---------------------
+function drawCharging(ctx) {
+    if (!player.isCharging) return;
+
+    // calcula o progresso (0 a 1)
+    let progress = chargeTime / maxChargeTime;
+    if (progress > 1) progress = 1;
+
+    // frame linear baseado no tempo
+    let frameIndex = Math.floor(progress * chargeFrames);
+    if (frameIndex >= chargeFrames) frameIndex = chargeFrames - 1;
+
+    // efeito de crescimento: escala proporcional ao progresso
+    const scale = 1 + progress * 1.5; // de 1x até 2.5x
+
+    ctx.drawImage(
+        chargeSprite,
+        frameIndex * chargeFrameWidth, 0,
+        chargeFrameWidth, chargeFrameHeight,
+        player.x + player.width/2 - (chargeFrameWidth*scale)/2,
+        player.y - 40 - (chargeFrameHeight*scale)/2,
+        chargeFrameWidth * scale,
+        chargeFrameHeight * scale
+    );
 }
 
 window.addEventListener("load", startGame);
