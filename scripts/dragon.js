@@ -18,6 +18,12 @@ export const dragon = {
     height: dragonFrameHeight,
     hp: 520
 };
+dragon.hitbox = {
+    offsetX: 3,  // distância do canto esquerdo do sprite até a hitbox
+    offsetY: 24,  // distância do topo do sprite até a hitbox
+    width: 390,   // largura da hitbox
+    height: 300   // altura da hitbox
+};
 
 export function updateDragonPosition(canvas) {
     dragon.x = canvas.width / 2 - dragon.width / 2;

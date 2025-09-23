@@ -6,10 +6,29 @@
     <title>Draco Wars</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <canvas id="gameCanvas"></canvas>
     <script type="module" src="scripts/script.js"></script>
-
-    
 </body>
+
+<script>
+    // cria o áudio de fundo
+    const music = new Audio('sounds/backgroundSoundtrack.mp3');
+    music.loop = true;   // música em loop
+    music.volume = 0.3;  // volume inicial
+
+    let musicLiberada = false;
+
+    // libera a música de fundo quando o jogador interagir
+    window.addEventListener("keydown", () => {
+        if (!musicLiberada) {
+            music.play().catch(err => {
+                console.warn("Erro ao iniciar música:", err);
+            });
+            musicLiberada = true;
+            console.log("🎵 Música de fundo iniciada!");
+        }
+    });
+</script>
 </html>

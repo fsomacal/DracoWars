@@ -15,8 +15,16 @@ export const player = {
     x: window.innerWidth / 2 - playerFrameWidth / 2, // centro da tela
     y: window.innerHeight - 300, // base da tela
     width: playerFrameWidth,
-    height: playerFrameHeight
+    height: playerFrameHeight,
+    invulnerable: false,
+    takeDamage(dmg) {
+        if (this.invulnerable) return;
+        this.hp = Math.max(0, this.hp - dmg);
+        this.invulnerable = true;
+        setTimeout(() => this.invulnerable = false, 800);
+    }
 };
+
 
 export function updatePlayerAnimation() {
     playerFrameCounter++;
@@ -69,4 +77,4 @@ export function updatePlayerPosition(canvas) {
     if (player.y < 0) player.y = 0;
     if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
     if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
-    }
+}

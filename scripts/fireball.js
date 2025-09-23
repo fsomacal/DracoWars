@@ -1,6 +1,7 @@
 // fireball.js
 const fireballSprite = new Image();
 fireballSprite.src = "images/fireball.png";
+const fireballSound = new Audio("sounds/fireball.m4a");
 
 let fireballLoaded = false;
 fireballSprite.onload = () => {
@@ -66,6 +67,7 @@ export let fireballs = [];
 
 export function spawnFireball(x, y) {
     fireballs.push(new Fireball(x, y));
+    fireballSound.play();
 }
 
 export function updateFireballs() {
