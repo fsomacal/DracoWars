@@ -3,10 +3,17 @@ import { drawDragon, updateDragonAnimation, updateDragonPosition, dragon } from 
 import { drawPlayer, updatePlayerAnimation, updatePlayerPosition, player } from './player.js';
 import { spawnFireball, updateFireballs, drawFireballs, fireballs } from './fireball.js';
 import { dragonBalls, trySpawnDragonBall, updateDragonBalls, drawDragonBalls } from './electroBall.js';
-
+import { slashes, trySpawnSlash, updateSlashes, drawSlashes } from './slash.js';
 // Canvas
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+let isPaused = false;
+
+// Seleciona elementos do menu (devem estar no HTML)
+const pauseMenu = document.getElementById("pauseMenu");
+const resumeButton = document.getElementById("resumeButton");
+const restartButton = document.getElementById("restartButton");
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -28,15 +35,21 @@ const chargeFrames = 9;
 
 // Input
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !charging) {
+  if (e.code === "Space" && !charging && !isPaused) {
     charging = true;
     chargeStart = Date.now();
     player.isCharging = true;
   }
 
-  // toggle hitbox debug
   if (e.key && e.key.toLowerCase() === 'h') showHitboxes = !showHitboxes;
+
+  // tecla ESC pausa/despausa
+  if (e.key === "Escape") {
+    if (isPaused) resumeGame();
+    else pauseGame();
+  }
 });
+
 window.addEventListener("keyup", (e) => {
   if (e.code === "Space") {
     charging = false;
@@ -68,13 +81,9 @@ let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-
-  // tocar rapidamente e pausar para desbloquear autoplay/make user gesture
   [backgroundMusic, dragonRoar, dragonGrowl].forEach(a => {
     a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
   });
-
-  // opcional: iniciar a música imediatamente
   backgroundMusic.play().catch(()=>{});
 }
 window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -95,25 +104,119 @@ function aabbCollision(x1, y1, w1, h1, x2, y2, w2, h2) {
   return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }
 
-// game loop
+// animação de fade out do dragão
+function fadeOutDragon(dragon, duration = 2000) {
+  dragon.fading = true;
+  dragon.opacity = 1;
+  const fadeStep = 1 / (duration / 16.67); // 60fps
+  const fadeInterval = setInterval(() => {
+    dragon.opacity -= fadeStep;
+    if (dragon.opacity <= 0) {
+      dragon.opacity = 0;
+      clearInterval(fadeInterval);
+      setTimeout(() => {
+        alert("You defeated the dragon! Congratulations!");
+      }, 500);
+    }
+  }, 16.67);
+}
+
+// explosão
+const explosionSprite = new Image();
+explosionSprite.src = 'images/explosion.png';
+const explosionFrames = 6;
+const explosionCols = 3;
+const explosionRows = 2;
+const explosionFrameWidth = 189;
+const explosionFrameHeight = 220;
+const explosions = [];
+
+function createExplosion(x, y) {
+  explosions.push({
+    x,
+    y,
+    currentFrame: 0,
+    frameDelay: 5,
+    frameCounter: 0
+  });
+}
+
+function spawnRandomExplosions(entity, count) {
+  const explosionSound = new Audio('sounds/explosion.mp3');
+  explosionSound.volume = 0.7;
+  for (let i = 0; i < count; i++) {
+    const delay = Math.random() * 2000;
+    setTimeout(() => {
+      const explosionX = entity.x + Math.random() * entity.width;
+      const explosionY = entity.y + Math.random() * entity.height;
+      createExplosion(explosionX, explosionY);
+      explosionSound.currentTime = 0;
+      explosionSound.play().catch(() => {});
+    }, delay);
+  }
+}
+
+// ===== FUNÇÕES DE PAUSE =====
+function pauseGame() {
+  isPaused = true;
+  backgroundMusic.pause();
+  pauseMenu.classList.add("show");
+}
+
+function resumeGame() {
+  isPaused = false;
+  pauseMenu.classList.remove("show");
+  backgroundMusic.play().catch(()=>{});
+  requestAnimationFrame(loop);
+}
+
+function restartGame() {
+  dragon.hp = 100;
+  dragon.opacity = 1;
+  dragon.death = false;
+  fireballs.length = 0;
+  slashes.length = 0;
+  explosions.length = 0;
+  player.x = 100;
+  player.y = 100;
+  resumeGame();
+}
+
+resumeButton.addEventListener("click", resumeGame);
+restartButton.addEventListener("click", restartGame);
+
+// ===== GAME LOOP =====
 function startGame() {
-  // inicializações
+  dragon.hp = 100;
+  dragon.opacity = 1;
   updateDragonPosition(canvas);
   updatePlayerPosition(canvas);
-
-  // start async dragon behavior
   dragonBehavior(dragon);
+  backgroundMusic.play().catch(()=>{});
 
   function update() {
-    // atualiza posição/inputs do player primeiro
+    if (isPaused) return;
+
     updatePlayerPosition(canvas);
     updatePlayerAnimation();
     updateDragonAnimation();
 
-    // atualizações de entidades
     updateFireballs();
-    trySpawnDragonBall(canvas.width);        // spawn das bolinhas do boss
-    updateDragonBalls(player, canvas.height);
+    trySpawnSlash(canvas.width);
+    updateSlashes(player, canvas.height);
+
+    // explosões
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      const exp = explosions[i];
+      exp.frameCounter++;
+      if (exp.frameCounter >= exp.frameDelay) {
+        exp.frameCounter = 0;
+        exp.currentFrame++;
+        if (exp.currentFrame >= explosionFrames) {
+          explosions.splice(i, 1);
+        }
+      }
+    }
 
     // charging attack
     if (charging) {
@@ -125,33 +228,45 @@ function startGame() {
       }
     }
 
-    // colisão: fireball -> dragon (usa dragon.hitbox)
+    // colisão fireball -> dragon
     for (let i = fireballs.length - 1; i >= 0; i--) {
       const f = fireballs[i];
       const hb = dragon.hitbox;
       const dragonHBX = dragon.x + hb.offsetX;
       const dragonHBY = dragon.y + hb.offsetY;
+
       if (aabbCollision(f.x, f.y, f.width, f.height, dragonHBX, dragonHBY, hb.width, hb.height)) {
         fireballs.splice(i, 1);
-        // aplicar dano caso queira
-        if (typeof dragon.hp === "number") {
+        if (typeof dragon.hp === "number" && dragon.hp > 0) {
           dragon.hp = Math.max(0, dragon.hp - 5);
+          console.log("Dragon hit! HP:", dragon.hp);
+          createExplosion(dragonHBX + hb.width / 2, dragonHBY + hb.height / 2);
         }
       }
     }
 
-    // (Lightning removido) — nada relacionado a lightning aqui
+    // morte do dragão
+    if (dragon.hp <= 0 && !dragon.death) {
+      dragon.death = true;
+      spawnRandomExplosions(dragon, 10);
+      fadeOutDragon(dragon, 2000);
+    }
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // aplica fade no dragão
+    if (dragon.fading) ctx.globalAlpha = dragon.opacity || 1;
     drawDragon(ctx);
+    ctx.globalAlpha = 1;
+
     drawPlayer(ctx);
     drawFireballs(ctx);
     drawCharging(ctx);
-    drawDragonBalls(ctx);
+    drawSlashes(ctx);
 
-    // barra de vida do dragão (visual)
+    // barra de HP
     const barWidth = dragon.width;
     const barHeight = 7.5;
     const barX = dragon.x + dragon.width / 2 - barWidth / 2;
@@ -159,41 +274,50 @@ function startGame() {
     ctx.fillStyle = "black";
     ctx.fillRect(barX, barY, barWidth, barHeight);
     ctx.fillStyle = "red";
-    ctx.fillRect(barX, barY, dragon.hp || barWidth, barHeight);
+    const currentHP = (dragon.hp / 100) * barWidth;
+    ctx.fillRect(barX, barY, currentHP, barHeight);
 
-    // (Lightning removido) — não há indicadores nem raios desenhados
-
-    // debug hitboxes
+    // hitboxes
     if (showHitboxes) {
-      // dragon hitbox
       const hb = dragon.hitbox;
       ctx.strokeStyle = "lime";
       ctx.lineWidth = 2;
       ctx.strokeRect(dragon.x + hb.offsetX, dragon.y + hb.offsetY, hb.width, hb.height);
-
-      // player
       ctx.strokeStyle = "cyan";
       ctx.strokeRect(player.x, player.y, player.width, player.height);
-
-      // fireballs
       ctx.strokeStyle = "orange";
       fireballs.forEach(f => ctx.strokeRect(f.x, f.y, f.width, f.height));
-
-      // dragonBalls
       ctx.strokeStyle = "magenta";
-      dragonBalls.forEach(b => ctx.strokeRect(b.x, b.y, b.width, b.height));
+      slashes.forEach(b => ctx.strokeRect(b.x, b.y, b.width, b.height));
     }
+
+    // desenha explosões
+    explosions.forEach(exp => {
+      const col = exp.currentFrame % explosionCols;
+      const row = Math.floor(exp.currentFrame / explosionCols);
+      ctx.drawImage(
+        explosionSprite,
+        col * explosionFrameWidth,
+        row * explosionFrameHeight,
+        explosionFrameWidth,
+        explosionFrameHeight,
+        exp.x - explosionFrameWidth / 2,
+        exp.y - explosionFrameHeight / 2,
+        explosionFrameWidth,
+        explosionFrameHeight
+      );
+    });
   }
 
   function loop() {
-    update();
+    if (!isPaused) update();
     draw();
     requestAnimationFrame(loop);
   }
   loop();
 }
 
-// desenho do charging (mantive sua lógica)
+// charging visual
 function drawCharging(ctx) {
   if (!player.isCharging) return;
   let progress = chargeTime / maxChargeTime;
@@ -212,18 +336,15 @@ function drawCharging(ctx) {
   );
 }
 
-// comportamento assíncrono do dragão (rugidos etc)
+// comportamento assíncrono do dragão
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
 async function dragonBehavior(dragon) {
-  while (dragon.hp === undefined || dragon.hp > 0) {
+  while (dragon.hp > 0) {
     await sleep(2000 + Math.random() * 3000);
     if (Math.random() < 0.15) {
       const sfx = choose([dragonGrowl, dragonRoar]);
       sfx.currentTime = 0;
       sfx.play().catch(() => {});
-      // opcional: iniciar música ao primeiro rugido
-      //backgroundMusic.play().catch(()=>{});
     }
   }
 }

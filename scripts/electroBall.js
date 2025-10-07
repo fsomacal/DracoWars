@@ -2,8 +2,8 @@
 export const dragonBalls = [];
 
 export const ballConfig = {
-  width: 48,
-  height: 48,
+  width: 128,
+  height: 128,
   totalFrames: 4,
   speedMin: 1.2,
   speedMax: 3.2,

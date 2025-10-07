@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,14 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <script type="module" src="scripts/script.js"></script>
+    <!-- MENU DE PAUSE -->
+    <div id="pauseMenu">
+        <div class="menu-box">
+          <h2>Jogo Pausado</h2>
+          <button id="resumeButton">Continuar</button>
+          <button id="restartButton">Reiniciar</button>
+        </div>
+      </div>      
 </body>
 
 <script>
@@ -31,4 +40,5 @@
         }
     });
 </script>
+
 </html>

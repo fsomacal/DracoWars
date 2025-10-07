@@ -32,3 +32,56 @@ canvas {
         display: inline;
     }
 }
+#pauseMenu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 999;
+  }
+  
+  #pauseMenu.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .menu-box {
+    background: #1c1c1c;
+    color: white;
+    padding: 30px 60px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+  }
+  
+  #pauseMenu.show .menu-box {
+    transform: scale(1);
+  }
+  
+  .menu-box button {
+    margin: 10px;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 10px;
+    background-color: #333;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  
+  .menu-box button:hover {
+    background-color: #555;
+    transform: scale(1.05);
+  }
+  
