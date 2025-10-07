@@ -17,6 +17,8 @@ export const player = {
     width: playerFrameWidth,
     height: playerFrameHeight,
     invulnerable: false,
+    hp: 100,
+    isCharging: false,
     takeDamage(dmg) {
         if (this.invulnerable) return;
         this.hp = Math.max(0, this.hp - dmg);
@@ -25,6 +27,23 @@ export const player = {
     }
 };
 
+// 🎯 HITBOX EM FORMA DE “+”
+player.hitboxes = [
+    // Barra vertical
+    {
+        get x() { return player.x + player.width * 0.45; },
+        get y() { return player.y + player.height * 0.1; },
+        get width() { return player.width * 0.1; },
+        get height() { return player.height * 0.8; }
+    },
+    // Barra horizontal
+    {
+        get x() { return player.x + player.width * 0.2; },
+        get y() { return player.y + player.height * 0.45; },
+        get width() { return player.width * 0.6; },
+        get height() { return player.height * 0.1; }
+    }
+];
 
 export function updatePlayerAnimation() {
     playerFrameCounter++;
@@ -47,6 +66,15 @@ export function drawPlayer(ctx) {
         playerFrameWidth,
         playerFrameHeight
     );
+}
+
+// 🧪 DESENHAR HITBOX (para debug)
+export function drawPlayerHitbox(ctx) {
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 2;
+    player.hitboxes.forEach(hb => {
+        ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
+    });
 }
 
 // Movimento

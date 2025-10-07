@@ -1,19 +1,15 @@
 // scripts/script.js
 import { drawDragon, updateDragonAnimation, updateDragonPosition, dragon } from './dragon.js';
-import { drawPlayer, updatePlayerAnimation, updatePlayerPosition, player } from './player.js';
+import { drawPlayer, updatePlayerAnimation, updatePlayerPosition, player, drawPlayerHitbox } from './player.js';
 import { spawnFireball, updateFireballs, drawFireballs, fireballs } from './fireball.js';
 import { dragonBalls, trySpawnDragonBall, updateDragonBalls, drawDragonBalls } from './electroBall.js';
 import { slashes, trySpawnSlash, updateSlashes, drawSlashes } from './slash.js';
+
 // Canvas
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 let isPaused = false;
-
-// Seleciona elementos do menu (devem estar no HTML)
-const pauseMenu = document.getElementById("pauseMenu");
-const resumeButton = document.getElementById("resumeButton");
-const restartButton = document.getElementById("restartButton");
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -35,21 +31,15 @@ const chargeFrames = 9;
 
 // Input
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !charging && !isPaused) {
+  if (e.code === "Space" && !charging) {
     charging = true;
     chargeStart = Date.now();
     player.isCharging = true;
   }
 
+  // toggle hitbox debug
   if (e.key && e.key.toLowerCase() === 'h') showHitboxes = !showHitboxes;
-
-  // tecla ESC pausa/despausa
-  if (e.key === "Escape") {
-    if (isPaused) resumeGame();
-    else pauseGame();
-  }
 });
-
 window.addEventListener("keyup", (e) => {
   if (e.code === "Space") {
     charging = false;
@@ -82,22 +72,13 @@ function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   [backgroundMusic, dragonRoar, dragonGrowl].forEach(a => {
-    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
+    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => { });
   });
-  backgroundMusic.play().catch(()=>{});
+  backgroundMusic.play().catch(() => { });
 }
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 
-// garante dragon.hitbox (fallback)
-if (!dragon.hitbox) {
-  dragon.hitbox = {
-    offsetX: 40,
-    offsetY: 40,
-    width: Math.max(100, (dragon.width || 200) - 80),
-    height: Math.max(100, (dragon.height || 200) - 80)
-  };
-}
 
 // util AABB
 function aabbCollision(x1, y1, w1, h1, x2, y2, w2, h2) {
@@ -141,6 +122,17 @@ function createExplosion(x, y) {
   });
 }
 
+// retorna a hitbox atual do player (usa offset + width/height definidos em player.hitbox)
+function getPlayerHitbox() {
+  const hb = player.hitbox;
+  return {
+    x: player.x + (hb.offsetX || 0),
+    y: player.y + (hb.offsetY || 0),
+    width: hb.width,
+    height: hb.height
+  };
+}
+
 function spawnRandomExplosions(entity, count) {
   const explosionSound = new Audio('sounds/explosion.mp3');
   explosionSound.volume = 0.7;
@@ -151,59 +143,32 @@ function spawnRandomExplosions(entity, count) {
       const explosionY = entity.y + Math.random() * entity.height;
       createExplosion(explosionX, explosionY);
       explosionSound.currentTime = 0;
-      explosionSound.play().catch(() => {});
+      explosionSound.play().catch(() => { });
     }, delay);
   }
 }
 
-// ===== FUNÇÕES DE PAUSE =====
-function pauseGame() {
-  isPaused = true;
-  backgroundMusic.pause();
-  pauseMenu.classList.add("show");
-}
-
-function resumeGame() {
-  isPaused = false;
-  pauseMenu.classList.remove("show");
-  backgroundMusic.play().catch(()=>{});
-  requestAnimationFrame(loop);
-}
-
-function restartGame() {
-  dragon.hp = 100;
-  dragon.opacity = 1;
-  dragon.death = false;
-  fireballs.length = 0;
-  slashes.length = 0;
-  explosions.length = 0;
-  player.x = 100;
-  player.y = 100;
-  resumeGame();
-}
-
-resumeButton.addEventListener("click", resumeGame);
-restartButton.addEventListener("click", restartGame);
-
-// ===== GAME LOOP =====
+// GAME LOOP
 function startGame() {
   dragon.hp = 100;
   dragon.opacity = 1;
   updateDragonPosition(canvas);
   updatePlayerPosition(canvas);
   dragonBehavior(dragon);
-  backgroundMusic.play().catch(()=>{});
 
   function update() {
-    if (isPaused) return;
-
     updatePlayerPosition(canvas);
     updatePlayerAnimation();
     updateDragonAnimation();
 
     updateFireballs();
-    trySpawnSlash(canvas.width);
-    updateSlashes(player, canvas.height);
+    trySpawnDragonBall(canvas.width);
+    updateDragonBalls(player, canvas.height);
+
+    // ---- slash: spawn/update ----
+    trySpawnSlash(dragon, player); // chance de spawn vindo do dragão (slash.js controla spawnChance)
+    updateSlashes(player, canvas.width, canvas.height);
+    // -----------------------------
 
     // explosões
     for (let i = explosions.length - 1; i >= 0; i--) {
@@ -231,19 +196,25 @@ function startGame() {
     // colisão fireball -> dragon
     for (let i = fireballs.length - 1; i >= 0; i--) {
       const f = fireballs[i];
+  
+      // pegar a hitbox do dragão
       const hb = dragon.hitbox;
-      const dragonHBX = dragon.x + hb.offsetX;
-      const dragonHBY = dragon.y + hb.offsetY;
-
-      if (aabbCollision(f.x, f.y, f.width, f.height, dragonHBX, dragonHBY, hb.width, hb.height)) {
-        fireballs.splice(i, 1);
-        if (typeof dragon.hp === "number" && dragon.hp > 0) {
-          dragon.hp = Math.max(0, dragon.hp - 5);
-          console.log("Dragon hit! HP:", dragon.hp);
-          createExplosion(dragonHBX + hb.width / 2, dragonHBY + hb.height / 2);
-        }
+      const dragonX = dragon.x + hb.offsetX;
+      const dragonY = dragon.y + hb.offsetY;
+  
+      // checar colisão
+      if (aabbCollision(f.x, f.y, f.width, f.height, dragonX, dragonY, hb.width, hb.height)) {
+          // remover fireball
+          fireballs.splice(i, 1);
+  
+          // reduzir HP do dragão
+          if (dragon.hp > 0) {
+              dragon.hp = Math.max(0, dragon.hp - 5);
+              createExplosion(dragon.x + dragon.width / 2, dragon.y + dragon.height / 2);
+          }
       }
     }
+  
 
     // morte do dragão
     if (dragon.hp <= 0 && !dragon.death) {
@@ -261,10 +232,13 @@ function startGame() {
     drawDragon(ctx);
     ctx.globalAlpha = 1;
 
+    // desenha slashes (vindo do dragão) logo depois do dragão, antes do player
+    drawSlashes(ctx);
+
     drawPlayer(ctx);
     drawFireballs(ctx);
     drawCharging(ctx);
-    drawSlashes(ctx);
+    drawDragonBalls(ctx);
 
     // barra de HP
     const barWidth = dragon.width;
@@ -279,16 +253,22 @@ function startGame() {
 
     // hitboxes
     if (showHitboxes) {
-      const hb = dragon.hitbox;
       ctx.strokeStyle = "lime";
       ctx.lineWidth = 2;
-      ctx.strokeRect(dragon.x + hb.offsetX, dragon.y + hb.offsetY, hb.width, hb.height);
-      ctx.strokeStyle = "cyan";
-      ctx.strokeRect(player.x, player.y, player.width, player.height);
+      const dragonX = dragon.x + dragon.hitbox.offsetX;
+      const dragonY = dragon.y + dragon.hitbox.offsetY;
+      ctx.strokeRect(dragonX, dragonY, dragon.hitbox.width, dragon.hitbox.height);
+      drawPlayerHitbox(ctx);
+
+      // projetéis e bolas
       ctx.strokeStyle = "orange";
       fireballs.forEach(f => ctx.strokeRect(f.x, f.y, f.width, f.height));
       ctx.strokeStyle = "magenta";
-      slashes.forEach(b => ctx.strokeRect(b.x, b.y, b.width, b.height));
+      dragonBalls.forEach(b => ctx.strokeRect(b.x, b.y, b.width, b.height));
+      
+      // slashes (debug) — mostra a área do slash
+      ctx.strokeStyle = "cyan";
+      slashes.forEach(s => ctx.strokeRect(s.x, s.y, s.width, s.height));
     }
 
     // desenha explosões
@@ -310,7 +290,7 @@ function startGame() {
   }
 
   function loop() {
-    if (!isPaused) update();
+    update();
     draw();
     requestAnimationFrame(loop);
   }
@@ -344,7 +324,7 @@ async function dragonBehavior(dragon) {
     if (Math.random() < 0.15) {
       const sfx = choose([dragonGrowl, dragonRoar]);
       sfx.currentTime = 0;
-      sfx.play().catch(() => {});
+      sfx.play().catch(() => { });
     }
   }
 }

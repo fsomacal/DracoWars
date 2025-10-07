@@ -2,8 +2,8 @@
 export const dragonBalls = [];
 
 export const ballConfig = {
-  width: 128,
-  height: 128,
+  width: 48,
+  height: 48,
   totalFrames: 4,
   speedMin: 1.2,
   speedMax: 3.2,
@@ -68,6 +68,29 @@ function damagePlayer(player, damage) {
   setTimeout(() => player.invulnerable = false, ballConfig.playerInvulMs);
 }
 
+// ---------- NOVA FUNÇÃO: pega a hitbox "real" do player (usa player.hitbox se existir) ----------
+function getPlayerHitbox(player) {
+  // Se o player definiu uma hitbox (esperado: { offsetX, offsetY, width, height }), usa ela.
+  if (player && player.hitbox && typeof player.hitbox === 'object') {
+    const hb = player.hitbox;
+    return {
+      x: player.x + (hb.offsetX || 0),
+      y: player.y + (hb.offsetY || 0),
+      width: (typeof hb.width === 'number') ? hb.width : 8,
+      height: (typeof hb.height === 'number') ? hb.height : 8
+    };
+  }
+
+  // Fallback: usar bounding box da sprite (compatibilidade)
+  return {
+    x: player.x || 0,
+    y: player.y || 0,
+    width: player.width || 32,
+    height: player.height || 32
+  };
+}
+// ---------------------------------------------------------------------------------------------
+
 export function updateDragonBalls(player, canvasHeight) {
   for (let i = dragonBalls.length - 1; i >= 0; i--) {
     const ball = dragonBalls[i];
@@ -87,13 +110,14 @@ export function updateDragonBalls(player, canvasHeight) {
     }
     // -----------------------------
 
-    const pw = player.width || 32;
-    const ph = player.height || 32;
-    if (aabbCollision(ball.x, ball.y, ball.width, ball.height, player.x, player.y, pw, ph)) {
+    // ---------- USANDO A HITBOX REAL DO PLAYER AQUI ----------
+    const phb = getPlayerHitbox(player);
+    if (aabbCollision(ball.x, ball.y, ball.width, ball.height, phb.x, phb.y, phb.width, phb.height)) {
       damagePlayer(player, ballConfig.damage);
       dragonBalls.splice(i, 1);
       continue;
     }
+    // ---------------------------------------------------------
 
     if (ball.y > canvasHeight + 50) dragonBalls.splice(i, 1);
   }
@@ -116,20 +140,5 @@ export function drawDragonBalls(ctx) {
       return;
     }
 
-    // proteção extra com try-catch caso algo inesperado ocorra
-    try {
-      ctx.drawImage(
-        ballSprite,
-        (ball.frameIndex % ballConfig.totalFrames) * ballConfig.width, 0,
-        ballConfig.width, ballConfig.height,
-        ball.x, ball.y,
-        ballConfig.width, ballConfig.height
-      );
-    } catch (err) {
-      // fallback seguro — evita crash do game loop
-      console.warn("Erro ao desenhar sprite das dragonBalls:", err);
-      ctx.fillStyle = "magenta";
-      ctx.fillRect(ball.x, ball.y, ball.width, ball.height);
-    }
   });
-}
+}  

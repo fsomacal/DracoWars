@@ -5,7 +5,7 @@ export const slashConfig = {
   width: 128,
   height: 128,
   totalFrames: 6,
-  speed: 8,
+  speed: 4,
   spawnChancePerFrame: 0.007, // chance de spawn a cada frame
   damage: 20,
   playerInvulMs: 1000,
