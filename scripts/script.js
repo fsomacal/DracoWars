@@ -1,6 +1,6 @@
 // scripts/script.js
 import { drawDragon, updateDragonAnimation, updateDragonPosition, dragon } from './dragon.js';
-import { drawPlayer, updatePlayerAnimation, updatePlayerPosition, player, drawPlayerHitbox } from './player.js';
+import { drawPlayer, updatePlayerAnimation, updatePlayerPosition, player, drawPlayerHitbox, updatePlayerTimers, drawPlayerUI } from './player.js';
 import { spawnFireball, updateFireballs, drawFireballs, fireballs } from './fireball.js';
 import { dragonBalls, trySpawnDragonBall, updateDragonBalls, drawDragonBalls } from './electroBall.js';
 import { slashes, trySpawnSlash, updateSlashes, drawSlashes } from './slash.js';
@@ -160,6 +160,9 @@ function startGame() {
     updatePlayerPosition(canvas);
     updatePlayerAnimation();
     updateDragonAnimation();
+
+    // atualizar timers do player (invulnerabilidade, etc)
+    updatePlayerTimers();
 
     updateFireballs();
     trySpawnDragonBall(canvas.width);

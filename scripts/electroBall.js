@@ -1,3 +1,4 @@
+import { player, entityHitsPlayerPlus } from './player.js';
 // scripts/electroBall.js (com delay de frames configurável)
 export const dragonBalls = [];
 
@@ -112,7 +113,7 @@ export function updateDragonBalls(player, canvasHeight) {
 
     // ---------- USANDO A HITBOX REAL DO PLAYER AQUI ----------
     const phb = getPlayerHitbox(player);
-    if (aabbCollision(ball.x, ball.y, ball.width, ball.height, phb.x, phb.y, phb.width, phb.height)) {
+    if (entityHitsPlayerPlus(ball.x, ball.y, ball.width, ball.height, player)) {
       damagePlayer(player, ballConfig.damage);
       dragonBalls.splice(i, 1);
       continue;
