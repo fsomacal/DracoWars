@@ -1,3 +1,4 @@
+import { player, entityHitsPlayerPlus } from './player.js';
 // scripts/slash.js
 export const slashes = [];
 
@@ -7,7 +8,7 @@ export const slashConfig = {
   totalFrames: 6,
   speed: 4,
   spawnChancePerFrame: 0.007, // chance de spawn a cada frame
-  damage: 20,
+  damage: 1, // ❤️ Cada hit tira 1 ponto de vida
   playerInvulMs: 1000,
   frameDelay: 4 // maior = mais lenta a animação
 };
@@ -91,7 +92,7 @@ export function updateSlashes(player, canvasWidth, canvasHeight) {
     // colisão com player
     const pw = player.width || 32;
     const ph = player.height || 32;
-    if (aabbCollision(s.x, s.y, s.width, s.height, player.x, player.y, pw, ph)) {
+    if (entityHitsPlayerPlus(s.x,s.y,s.width,s.height, player)) {
       damagePlayer(player, slashConfig.damage);
       slashes.splice(i, 1);
       continue;
