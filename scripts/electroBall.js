@@ -1,3 +1,4 @@
+import { player, entityHitsPlayerPlus } from './player.js';
 // scripts/electroBall.js (com delay de frames configurável)
 export const dragonBalls = [];
 
@@ -10,7 +11,7 @@ export const ballConfig = {
   homingChance: 0.05,
   spawnChancePerFrame: 0.005,
   maxPerSpawn: 2,
-  damage: 10,
+  damage: 1, // ❤️ Cada hit tira 1 ponto de vida
   playerInvulMs: 1000,
   frameDelay: 8 // <-- troque esse valor para ajustar a velocidade da animação (maior = mais lento)
 };
@@ -112,7 +113,7 @@ export function updateDragonBalls(player, canvasHeight) {
 
     // ---------- USANDO A HITBOX REAL DO PLAYER AQUI ----------
     const phb = getPlayerHitbox(player);
-    if (aabbCollision(ball.x, ball.y, ball.width, ball.height, phb.x, phb.y, phb.width, phb.height)) {
+    if (entityHitsPlayerPlus(ball.x, ball.y, ball.width, ball.height, player)) {
       damagePlayer(player, ballConfig.damage);
       dragonBalls.splice(i, 1);
       continue;
@@ -140,5 +141,19 @@ export function drawDragonBalls(ctx) {
       return;
     }
 
+    // Desenha a bola elétrica animada
+    try {
+      ctx.drawImage(
+        ballSprite,
+        (ball.frameIndex % ballConfig.totalFrames) * ballConfig.width, 0,
+        ballConfig.width, ballConfig.height,
+        ball.x, ball.y,
+        ballConfig.width, ballConfig.height
+      );
+    } catch (err) {
+      console.warn("Erro ao desenhar electroBall:", err);
+      ctx.fillStyle = "cyan";
+      ctx.fillRect(ball.x, ball.y, ball.width, ball.height);
+    }
   });
 }  
