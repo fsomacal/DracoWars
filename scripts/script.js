@@ -10,7 +10,6 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 let isPaused = false;
-let gameOver = false;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -32,7 +31,7 @@ const chargeFrames = 9;
 
 // Input
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !charging && !gameOver) {
+  if (e.code === "Space" && !charging) {
     charging = true;
     chargeStart = Date.now();
     player.isCharging = true;
@@ -40,11 +39,6 @@ window.addEventListener("keydown", (e) => {
 
   // toggle hitbox debug
   if (e.key && e.key.toLowerCase() === 'h') showHitboxes = !showHitboxes;
-  
-  // restart game on R key after game over
-  if (e.key && e.key.toLowerCase() === 'r' && gameOver) {
-    location.reload();
-  }
 });
 window.addEventListener("keyup", (e) => {
   if (e.code === "Space") {
@@ -163,21 +157,12 @@ function startGame() {
   dragonBehavior(dragon);
 
   function update() {
-    // ⛔ Não atualiza nada se o jogo acabou
-    if (gameOver) return;
-    
     updatePlayerPosition(canvas);
     updatePlayerAnimation();
     updateDragonAnimation();
 
     // atualizar timers do player (invulnerabilidade, etc)
     updatePlayerTimers();
-    
-    // ⛔ Verifica se o player morreu
-    if (player.hp <= 0) {
-      gameOver = true;
-      return;
-    }
 
     updateFireballs();
     trySpawnDragonBall(canvas.width);
@@ -258,10 +243,7 @@ function startGame() {
     drawCharging(ctx);
     drawDragonBalls(ctx);
 
-    // ❤️ Desenha corações do jogador
-    drawPlayerUI(ctx);
-
-    // barra de HP do dragão
+    // barra de HP
     const barWidth = dragon.width;
     const barHeight = 7.5;
     const barX = dragon.x + dragon.width / 2 - barWidth / 2;
@@ -308,32 +290,6 @@ function startGame() {
         explosionFrameHeight
       );
     });
-    
-    // 💀 Tela de Game Over
-    if (gameOver) {
-      ctx.save();
-      
-      // Fundo semi-transparente
-      ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Texto "GAME OVER"
-      ctx.fillStyle = "#E74C3C";
-      ctx.font = "bold 80px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
-      ctx.shadowBlur = 20;
-      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 50);
-      
-      // Texto de reiniciar
-      ctx.fillStyle = "white";
-      ctx.font = "30px Arial";
-      ctx.shadowBlur = 10;
-      ctx.fillText("Pressione R para Reiniciar", canvas.width / 2, canvas.height / 2 + 50);
-      
-      ctx.restore();
-    }
   }
 
   function loop() {

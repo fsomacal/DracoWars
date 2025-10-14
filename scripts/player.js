@@ -68,7 +68,15 @@ export function drawPlayer(ctx) {
     );
 }
 
-
+// 🧪 DESENHAR HITBOX (para debug)
+/*export function drawPlayerHitbox(ctx) {
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 2;
+    player.hitboxes.forEach(hb => {
+        ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
+    });
+}
+*/
 // Movimento
 let moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
 const playerSpeed = 5;
@@ -101,9 +109,10 @@ export function updatePlayerPosition(canvas) {
 
 
 
-// ❤️ Sistema de vida com corações
-player.maxHp = 6; // 6 pontos = 3 corações (cada coração = 2 pontos)
+// Vida e sistema de colisão em forma de '+'
+player.maxHp = 100;
 player.hp = player.maxHp;
+player.lives = 3;
 player.invulnerable = false;
 player.invulTimer = 0;
 player.invulMs = 1200; // invulnerabilidade após levar dano
@@ -114,10 +123,14 @@ player.takeDamage = function(damage) {
     player.invulnerable = true;
     player.invulTimer = Date.now();
     player.hp = Math.max(0, player.hp - damage);
-    
-    // quando hp zera, game over (tratado no script.js)
+    // quando hp zera, perde 1 vida e reseta hp
     if (player.hp === 0) {
-        console.log("Player morreu!");
+        player.lives = Math.max(0, player.lives - 1);
+        // respawn simples: reposicionar no centro inferior
+        player.x = window.innerWidth / 2 - player.width / 2;
+        player.y = window.innerHeight - 300;
+        player.hp = player.maxHp;
+        // opcional: aplicar um pequeno knockback temporal
     }
 };
 
@@ -180,94 +193,26 @@ export function drawPlayerHitbox(ctx, p = player) {
     ctx.restore();
 }
 
-// ❤️ Desenha corações na UI (cada coração = 2 pontos de vida)
+// Desenha vida (barra simples) — chame drawPlayerUI(ctx) no loop principal
 export function drawPlayerUI(ctx) {
-    const padding = 20;
-    const heartSize = 32;
-    const heartSpacing = 8;
-    const maxHearts = 3; // 3 corações = 6 pontos de vida
-    
+    const padding = 16;
+    const barW = 220;
+    const barH = 14;
+    const x = padding;
+    const y = padding;
+    // fundo
     ctx.save();
-    
-    // Desenha cada coração
-    for (let i = 0; i < maxHearts; i++) {
-        const x = padding + i * (heartSize + heartSpacing);
-        const y = padding;
-        
-        // Calcula quantos pontos de vida este coração representa
-        const heartHp = player.hp - (i * 2);
-        
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.beginPath();
-        
-        // Desenha a forma do coração
-        const centerX = x + heartSize / 2;
-        const centerY = y + heartSize / 2;
-        const width = heartSize;
-        const height = heartSize;
-        const topCurveHeight = height * 0.3;
-        
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY + height / 4);
-        
-        // Curva esquerda
-        ctx.bezierCurveTo(
-            centerX, centerY - height / 4,
-            centerX - width / 2, centerY - height / 4,
-            centerX - width / 2, centerY + topCurveHeight / 2
-        );
-        ctx.bezierCurveTo(
-            centerX - width / 2, centerY + (height / 4),
-            centerX, centerY + (height / 2),
-            centerX, centerY + height / 4
-        );
-        
-        // Curva direita
-        ctx.bezierCurveTo(
-            centerX, centerY + (height / 2),
-            centerX + width / 2, centerY + (height / 4),
-            centerX + width / 2, centerY + topCurveHeight / 2
-        );
-        ctx.bezierCurveTo(
-            centerX + width / 2, centerY - height / 4,
-            centerX, centerY - height / 4,
-            centerX, centerY + height / 4
-        );
-        
-        ctx.closePath();
-        
-        // Determina a cor do coração baseado no HP
-        if (heartHp >= 2) {
-            // Coração cheio
-            ctx.fillStyle = "#E74C3C";
-        } else if (heartHp === 1) {
-            // Meio coração
-            ctx.fillStyle = "#E74C3C";
-            ctx.fill();
-            
-            // Adiciona máscara para mostrar só metade
-            ctx.save();
-            ctx.fillStyle = "rgba(50, 50, 50, 0.7)";
-            ctx.fillRect(x + heartSize / 2, y, heartSize / 2, heartSize);
-            ctx.restore();
-            
-            // Contorno
-            ctx.strokeStyle = "#C0392B";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            continue;
-        } else {
-            // Coração vazio
-            ctx.fillStyle = "rgba(50, 50, 50, 0.5)";
-        }
-        
-        ctx.fill();
-        
-        // Contorno
-        ctx.strokeStyle = heartHp > 0 ? "#C0392B" : "rgba(100, 100, 100, 0.5)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    }
-    
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(x-4, y-4, barW+8, barH+8);
+    // vida
+    const hpRatio = (player.hp || 0) / (player.maxHp || 100);
+    ctx.fillStyle = "rgba(200,40,40,0.95)";
+    ctx.fillRect(x, y, Math.max(0, Math.floor(barW * hpRatio)), barH);
+    // contorno e texto
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(x, y, barW, barH);
+    ctx.fillStyle = "white";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(`HP: ${player.hp}/${player.maxHp}   Lives: ${player.lives}`, x + 6, y + barH + 16);
     ctx.restore();
 }
